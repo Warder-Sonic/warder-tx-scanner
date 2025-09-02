@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { CONFIG, SONIC_CONTRACTS, TREASURY_ABI } from '../config';
+import { CONFIG, SONIC_CONTRACTS, TREASURY_ABI, WALLET_ABI } from '../config';
 import { Transaction } from '../types';
 import logger from '../utils/logger';
 
@@ -7,6 +7,8 @@ export class BlockchainService {
   private provider: ethers.JsonRpcProvider;
   private wallet?: ethers.Wallet;
   private treasuryContract?: ethers.Contract;
+  private walletContract?: ethers.Contract;
+  private feeManagerContract?: ethers.Contract;
 
   constructor() {
     const rpcUrl = CONFIG.NETWORK === 'mainnet' ? CONFIG.SONIC_MAINNET_RPC_URL : CONFIG.SONIC_RPC_URL;
@@ -15,6 +17,15 @@ export class BlockchainService {
     if (CONFIG.PRIVATE_KEY) {
       this.wallet = new ethers.Wallet(CONFIG.PRIVATE_KEY, this.provider);
       this.treasuryContract = new ethers.Contract(CONFIG.TREASURY_CONTRACT, TREASURY_ABI, this.wallet);
+      this.walletContract = new ethers.Contract(CONFIG.WALLET_CONTRACT, WALLET_ABI, this.wallet);
+      
+      const FEE_MANAGER_ABI = [
+        "function processClaim(address _user, uint256 _amount) external payable",
+        "function calculateFee(uint256 _amount) external view returns (uint256)",
+        "function treasuryShare() external view returns (uint256)",
+        "function sonicShare() external view returns (uint256)"
+      ];
+      this.feeManagerContract = new ethers.Contract(CONFIG.FEE_MANAGER_CONTRACT, FEE_MANAGER_ABI, this.wallet);
     }
   }
 
@@ -102,6 +113,100 @@ export class BlockchainService {
       return ethers.formatEther(balance);
     } catch (error) {
       logger.error('Error getting treasury balance:', error);
+      throw error;
+    }
+  }
+
+  async getCashbackBalance(userAddress: string): Promise<string> {
+    if (!this.walletContract) {
+      throw new Error('Wallet contract not initialized');
+    }
+
+    try {
+      const balance = await this.walletContract.cashbackBalances(userAddress);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      logger.error('Error getting cashback balance:', error);
+      throw error;
+    }
+  }
+
+  async getTotalCashbackHeld(): Promise<string> {
+    if (!this.walletContract) {
+      throw new Error('Wallet contract not initialized');
+    }
+
+    try {
+      const total = await this.walletContract.totalCashbackHeld();
+      return ethers.formatEther(total);
+    } catch (error) {
+      logger.error('Error getting total cashback held:', error);
+      throw error;
+    }
+  }
+
+  async creditCashback(userAddress: string, amount: string): Promise<string> {
+    if (!this.walletContract || !this.wallet) {
+      throw new Error('Wallet contract or wallet not initialized');
+    }
+
+    try {
+      logger.info(`Crediting cashback: ${amount} S to ${userAddress}`);
+      
+      const amountWei = ethers.parseEther(amount);
+      const tx = await this.walletContract.creditCashback(userAddress, amountWei);
+      
+      logger.info(`Credit cashback transaction sent: ${tx.hash}`);
+      await tx.wait();
+      
+      logger.info(`Credit cashback confirmed: ${tx.hash}`);
+      return tx.hash;
+    } catch (error) {
+      logger.error('Error crediting cashback:', error);
+      throw error;
+    }
+  }
+
+  async processClaim(userAddress: string, amount: string): Promise<{ txHash: string; feeAmount: string }> {
+    if (!this.feeManagerContract || !this.wallet) {
+      throw new Error('Fee Manager contract or wallet not initialized');
+    }
+
+    try {
+      const amountWei = ethers.parseEther(amount);
+      
+      const feeAmount = await this.feeManagerContract.calculateFee(amountWei);
+      logger.info(`Calculated claim fee: ${ethers.formatEther(feeAmount)} S for amount ${amount} S`);
+      
+      const tx = await this.feeManagerContract.processClaim(userAddress, amountWei, {
+        value: feeAmount
+      });
+      
+      logger.info(`Claim transaction sent: ${tx.hash}`);
+      await tx.wait();
+      
+      logger.info(`Claim confirmed: ${tx.hash}`);
+      return {
+        txHash: tx.hash,
+        feeAmount: ethers.formatEther(feeAmount)
+      };
+    } catch (error) {
+      logger.error('Error processing claim:', error);
+      throw error;
+    }
+  }
+
+  async calculateClaimFee(amount: string): Promise<string> {
+    if (!this.feeManagerContract) {
+      throw new Error('Fee Manager contract not initialized');
+    }
+
+    try {
+      const amountWei = ethers.parseEther(amount);
+      const fee = await this.feeManagerContract.calculateFee(amountWei);
+      return ethers.formatEther(fee);
+    } catch (error) {
+      logger.error('Error calculating claim fee:', error);
       throw error;
     }
   }

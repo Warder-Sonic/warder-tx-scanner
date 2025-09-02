@@ -1,13 +1,16 @@
 import { Request, Response } from 'express';
 import { ScannerService } from '../services/ScannerService';
+import { BlockchainService } from '../services/BlockchainService';
 import Transaction from '../models/Transaction';
 import logger from '../utils/logger';
 
 export class ApiController {
   private scannerService: ScannerService;
+  private blockchainService: BlockchainService;
 
   constructor(scannerService: ScannerService) {
     this.scannerService = scannerService;
+    this.blockchainService = new BlockchainService();
   }
 
   async getStats(req: Request, res: Response): Promise<void> {
@@ -204,6 +207,152 @@ export class ApiController {
       res.status(500).json({
         success: false,
         error: 'Failed to check health'
+      });
+    }
+  }
+
+  async getWalletBalance(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = req.params.address?.toLowerCase();
+      
+      if (!userAddress) {
+        res.status(400).json({
+          success: false,
+          error: 'User address is required'
+        });
+        return;
+      }
+
+      const cashbackBalance = await this.blockchainService.getCashbackBalance(userAddress);
+      
+      const transactions = await Transaction.find({ 
+        from: userAddress,
+        processed: true 
+      }).sort({ timestamp: -1 }).limit(10).lean();
+
+      res.json({
+        success: true,
+        data: {
+          userAddress,
+          cashbackBalance,
+          recentTransactions: transactions
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting wallet balance:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get wallet balance'
+      });
+    }
+  }
+
+  async calculateClaimFee(req: Request, res: Response): Promise<void> {
+    try {
+      const { amount } = req.body;
+      
+      if (!amount || parseFloat(amount) <= 0) {
+        res.status(400).json({
+          success: false,
+          error: 'Valid amount is required'
+        });
+        return;
+      }
+
+      const fee = await this.blockchainService.calculateClaimFee(amount);
+      const netAmount = parseFloat(amount) - parseFloat(fee);
+
+      res.json({
+        success: true,
+        data: {
+          requestedAmount: amount,
+          claimFee: fee,
+          netAmount: netAmount.toString(),
+          treasuryShare: (parseFloat(fee) * 0.9).toString(),
+          sonicShare: (parseFloat(fee) * 0.1).toString()
+        }
+      });
+    } catch (error) {
+      logger.error('Error calculating claim fee:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate claim fee'
+      });
+    }
+  }
+
+  async processClaim(req: Request, res: Response): Promise<void> {
+    try {
+      const { userAddress, amount } = req.body;
+      
+      if (!userAddress || !amount || parseFloat(amount) <= 0) {
+        res.status(400).json({
+          success: false,
+          error: 'Valid user address and amount are required'
+        });
+        return;
+      }
+
+      const currentBalance = await this.blockchainService.getCashbackBalance(userAddress);
+      
+      if (parseFloat(currentBalance) < parseFloat(amount)) {
+        res.status(400).json({
+          success: false,
+          error: 'Insufficient cashback balance'
+        });
+        return;
+      }
+
+      const result = await this.blockchainService.processClaim(userAddress, amount);
+
+      res.json({
+        success: true,
+        data: {
+          userAddress,
+          claimedAmount: amount,
+          feeAmount: result.feeAmount,
+          netAmount: (parseFloat(amount) - parseFloat(result.feeAmount)).toString(),
+          transactionHash: result.txHash
+        }
+      });
+    } catch (error) {
+      logger.error('Error processing claim:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process claim'
+      });
+    }
+  }
+
+  async getTotalCashbackHeld(req: Request, res: Response): Promise<void> {
+    try {
+      const totalHeld = await this.blockchainService.getTotalCashbackHeld();
+      
+      const topHolders = await Transaction.aggregate([
+        { $match: { processed: true } },
+        {
+          $group: {
+            _id: '$from',
+            totalCashback: { $sum: { $toDouble: '$cashbackAmount' } },
+            transactionCount: { $sum: 1 }
+          }
+        },
+        { $sort: { totalCashback: -1 } },
+        { $limit: 10 }
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          totalCashbackHeld: totalHeld,
+          topHolders
+        }
+      });
+    } catch (error) {
+      logger.error('Error getting total cashback held:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get total cashback held'
       });
     }
   }

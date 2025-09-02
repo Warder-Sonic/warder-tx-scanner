@@ -39,7 +39,11 @@ function setupRoutes() {
   app.get('/api/stats', (req, res) => apiController.getStats(req, res));
   app.get('/api/transactions', (req, res) => apiController.getTransactions(req, res));
   app.get('/api/users/:address/cashback', (req, res) => apiController.getUserCashback(req, res));
+  app.get('/api/users/:address/balance', (req, res) => apiController.getWalletBalance(req, res));
   app.get('/api/dex/stats', (req, res) => apiController.getDexStats(req, res));
+  app.get('/api/cashback/total', (req, res) => apiController.getTotalCashbackHeld(req, res));
+  app.post('/api/claim/calculate-fee', (req, res) => apiController.calculateClaimFee(req, res));
+  app.post('/api/claim/process', (req, res) => apiController.processClaim(req, res));
   
   app.get('/', (req, res) => {
     res.json({
@@ -51,7 +55,11 @@ function setupRoutes() {
         'GET /api/stats - Scanner statistics',
         'GET /api/transactions - Get transactions with pagination',
         'GET /api/users/:address/cashback - Get user cashback data',
-        'GET /api/dex/stats - DEX statistics'
+        'GET /api/users/:address/balance - Get user wallet balance',
+        'GET /api/dex/stats - DEX statistics',
+        'GET /api/cashback/total - Get total cashback held',
+        'POST /api/claim/calculate-fee - Calculate claim fee',
+        'POST /api/claim/process - Process cashback claim'
       ]
     });
   });
