@@ -32,7 +32,9 @@ export const SONIC_CONTRACTS = {
   SONICSWAP_ROUTER: '0x8885b3cfF909e129d9F8f75b196503F4F8B1A351',
   SONICX_SWAP_TOKEN: '0x008d9c24266e09D26655395bd47B5F53BbCA8AFF',
   
-  WAGMI_CONTRACT: '0x92cc36d66e9d739d50673d1f27929a371fb83a67'
+  WAGMI_CONTRACT: '0x92cc36d66e9d739d50673d1f27929a371fb83a67',
+  
+  TEST_DEX_ROUTER: '0x668A3cf25392Bc6688Cb7C74690b984C05CF1aFF'
 };
 
 export const CASHBACK_RULES = [
@@ -75,6 +77,16 @@ export const CASHBACK_RULES = [
     isActive: true,
     boostMultiplier: 1.1,
     description: 'WAGMI DEX Protocol'
+  },
+  {
+    contractAddress: SONIC_CONTRACTS.TEST_DEX_ROUTER,
+    dexName: 'Test DEX',
+    baseRate: 0.08,
+    maxCashback: 100,
+    minTransaction: 0.1,
+    isActive: true,
+    boostMultiplier: 1.5,
+    description: 'Test DEX Router for development'
   }
 ];
 

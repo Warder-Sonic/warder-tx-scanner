@@ -216,7 +216,8 @@ export class BlockchainService {
       SONIC_CONTRACTS.SHADOW_ROUTER,
       SONIC_CONTRACTS.SHADOW_UNIVERSAL_ROUTER,
       SONIC_CONTRACTS.SONICSWAP_ROUTER,
-      SONIC_CONTRACTS.WAGMI_CONTRACT
+      SONIC_CONTRACTS.WAGMI_CONTRACT,
+      SONIC_CONTRACTS.TEST_DEX_ROUTER
     ];
     
     return dexAddresses.some(addr => addr.toLowerCase() === toAddress.toLowerCase());
@@ -227,7 +228,8 @@ export class BlockchainService {
       [SONIC_CONTRACTS.SHADOW_ROUTER.toLowerCase()]: 'Shadow Exchange',
       [SONIC_CONTRACTS.SHADOW_UNIVERSAL_ROUTER.toLowerCase()]: 'Shadow Exchange Universal',
       [SONIC_CONTRACTS.SONICSWAP_ROUTER.toLowerCase()]: 'SonicSwap',
-      [SONIC_CONTRACTS.WAGMI_CONTRACT.toLowerCase()]: 'WAGMI'
+      [SONIC_CONTRACTS.WAGMI_CONTRACT.toLowerCase()]: 'WAGMI',
+      [SONIC_CONTRACTS.TEST_DEX_ROUTER.toLowerCase()]: 'Test DEX'
     };
     
     return dexMap[contractAddress.toLowerCase()] || 'Unknown DEX';
