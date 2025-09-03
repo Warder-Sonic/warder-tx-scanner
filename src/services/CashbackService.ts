@@ -19,7 +19,7 @@ export class CashbackService {
       logger.info(`Using test value of 10 S for DEX transaction ${transaction.hash}`);
     }
     
-    if (transactionValueEth < rule.minTransaction) {
+    if (rule.minTransaction && transactionValueEth < rule.minTransaction) {
       logger.debug(`Transaction ${transaction.hash} below minimum: ${transactionValueEth} < ${rule.minTransaction}`);
       return null;
     }

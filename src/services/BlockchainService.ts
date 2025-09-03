@@ -46,7 +46,7 @@ export class BlockchainService {
         if (block?.transactions) {
           for (let i = 0; i < Math.min(3, block.transactions.length); i++) {
             const tx = block.transactions[i];
-            logger.info(`TX ${i}: ${typeof tx === 'string' ? tx : tx.hash}`);
+            logger.info(`TX ${i}: ${typeof tx === 'string' ? tx : (tx as any).hash}`);
           }
         }
       }
