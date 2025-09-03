@@ -41,6 +41,15 @@ export class BlockchainService {
   async getBlockTransactions(blockNumber: number): Promise<Transaction[]> {
     try {
       const block = await this.provider.getBlock(blockNumber, true);
+      if (blockNumber === 582887) {
+        logger.info(`Block 582887 has ${block?.transactions?.length || 0} transactions`);
+        if (block?.transactions) {
+          for (let i = 0; i < Math.min(3, block.transactions.length); i++) {
+            const tx = block.transactions[i];
+            logger.info(`TX ${i}: ${typeof tx === 'string' ? tx : tx.hash}`);
+          }
+        }
+      }
       if (!block) {
         logger.warn(`Block ${blockNumber} not found`);
         return [];
@@ -48,8 +57,14 @@ export class BlockchainService {
 
       const transactions: Transaction[] = [];
       
-      for (const tx of block.transactions) {
-        if (typeof tx === 'string') continue;
+      for (const txData of block.transactions) {
+        let tx;
+        if (typeof txData === 'string') {
+          tx = await this.provider.getTransaction(txData);
+          if (!tx) continue;
+        } else {
+          tx = txData;
+        }
         
         const receipt = await this.provider.getTransactionReceipt(tx.hash);
         if (!receipt) continue;
@@ -66,8 +81,15 @@ export class BlockchainService {
           contractAddress: receipt.to || ''
         };
 
-        if (this.isDexTransaction(transaction.to)) {
-          transaction.dexName = this.getDexName(transaction.to);
+        const targetAddress = tx.to || receipt.to || '';
+        
+        if (tx.hash === '0x8fed66e80741290eb3f14c54bbd1ed5a255ac3913326ec2fa3449c8ffd655a65') {
+          logger.info(`FOUND YOUR TX: tx.to=${tx.to}, receipt.to=${receipt.to}, targetAddress=${targetAddress}`);
+          logger.info(`isDexTransaction(${targetAddress}) = ${this.isDexTransaction(targetAddress)}`);
+        }
+        
+        if (this.isDexTransaction(targetAddress)) {
+          transaction.dexName = this.getDexName(targetAddress);
           transaction.swapType = this.getSwapType(transaction);
           transactions.push(transaction);
         }

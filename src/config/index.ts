@@ -83,7 +83,7 @@ export const CASHBACK_RULES = [
     dexName: 'Test DEX',
     baseRate: 0.08,
     maxCashback: 100,
-    minTransaction: 0.1,
+    minTransaction: 0,
     isActive: true,
     boostMultiplier: 1.5,
     description: 'Test DEX Router for development'
