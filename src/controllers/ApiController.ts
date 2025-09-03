@@ -40,7 +40,7 @@ export class ApiController {
       const skip = (page - 1) * limit;
       
       const filter: any = {};
-      if (userAddress) filter.from = userAddress.toLowerCase();
+      if (userAddress) filter.from = { $regex: new RegExp(`^${userAddress}$`, 'i') };
       if (dexName) filter.dexName = dexName;
       if (processed !== undefined) filter.processed = processed === 'true';
 

@@ -40,6 +40,7 @@ function setupRoutes() {
   app.get('/api/transactions', (req, res) => apiController.getTransactions(req, res));
   app.get('/api/users/:address/cashback', (req, res) => apiController.getUserCashback(req, res));
   app.get('/api/users/:address/balance', (req, res) => apiController.getWalletBalance(req, res));
+  app.get('/api/wallet/:address/balance', (req, res) => apiController.getWalletBalance(req, res));
   app.get('/api/dex/stats', (req, res) => apiController.getDexStats(req, res));
   app.get('/api/cashback/total', (req, res) => apiController.getTotalCashbackHeld(req, res));
   app.post('/api/claim/calculate-fee', (req, res) => apiController.calculateClaimFee(req, res));
@@ -56,6 +57,7 @@ function setupRoutes() {
         'GET /api/transactions - Get transactions with pagination',
         'GET /api/users/:address/cashback - Get user cashback data',
         'GET /api/users/:address/balance - Get user wallet balance',
+        'GET /api/wallet/:address/balance - Get user wallet balance (alias)',
         'GET /api/dex/stats - DEX statistics',
         'GET /api/cashback/total - Get total cashback held',
         'POST /api/claim/calculate-fee - Calculate claim fee',
